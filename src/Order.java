@@ -1,30 +1,38 @@
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Order {
-	private String id;
-	private Menu menu;
+	private int orderID;
+	private String menuName;
 	private List<MenuItem> menuItems;
 	private String status;
 	private UserData userData;
+	private LocalDateTime timestamp;
 	
 	// TODO: incorporate payment system
 	
 	// Order status' Pending, Processing, Completed, Delivered
 	
-	public Order(String id, Menu menu, List<MenuItem> menuItems, UserData userData) {
-		this.id = id;
-		this.menu = menu;
+	public Order(LocalDateTime timestamp, int orderID, String menuName, String status, List<MenuItem> menuItems, UserData userData) {
+		this.timestamp = timestamp;
+		this.orderID = orderID;
+		this.menuName = menuName;
+		this.status = status;
 		this.menuItems = menuItems;
-		this.status = "Pending";
 		this.userData = userData;
+		this.menuItems = new ArrayList<>();
 	}
 	
 	// Getters
-	public String getId() {
-		return this.id;
+	public LocalDateTime getTimestamp() {
+		return this.timestamp;
 	}
-	public Menu getMenu() {
-		return this.menu;
+	public int getOrderID() {
+		return this.orderID;
+	}
+	public String getMenuName() {
+		return this.menuName;
 	}
 	public List<MenuItem> getMenuItems() {
 		return this.menuItems;
@@ -35,20 +43,33 @@ public class Order {
 	public UserData getUserData() {
 		return this.userData;
 	}
-	// Setters
-	public void setId(String id) {
-		this.id = id;
+	public LocalDateTime getTimeStamp() {
+		return this.timestamp;
 	}
-	public void setMenu(Menu menu) {
-		this.menu = menu;
+	// Setters
+	public void setTimestamp(LocalDateTime timestamp) {
+		this.timestamp = timestamp;
+	}
+	public void setOrderID(int orderID) {
+		this.orderID = orderID;
 	}
 	public void setMenuItems(List<MenuItem> menuItems) {
 		this.menuItems = menuItems;
+	}
+	public void setMenuName(String menuName) {
+		this.menuName = menuName;
 	}
 	public void setStatus(String status) {
 		this.status = status;
 	}
 	public void setUserData(UserData userData) {
 		this.userData = userData;
+	}
+	
+	public void addMenuItem(MenuItem menuItem) {
+		this.menuItems.add(menuItem);
+	}
+	public void setTimestamp() {
+		this.timestamp = LocalDateTime.now();
 	}
 }

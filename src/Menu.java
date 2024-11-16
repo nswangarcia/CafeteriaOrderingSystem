@@ -2,12 +2,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Menu {
-	private String id;
+	private int id;
 	private String status;
 	private String name;
 	private List<MenuItem> menuItems;
 
-	public Menu(String id, String status, String name) {
+	public Menu(int id, String status, String name) {
 		this.id = id;
 		this.status = status;
 		this.name = name;
@@ -17,7 +17,11 @@ public class Menu {
 	
 	public void addMenuItem(MenuItem menuItem) {
 		menuItems.add(menuItem);
-		System.out.println("Menu item: " + menuItem.getName() + " added to Menu: " + getName());
+		//System.out.println("Menu item: " + menuItem.getName() + " added to Menu: " + getName());
+	}
+	
+	public void addDefaultMenuItem(MenuItem menuItem) {
+		menuItems.add(menuItem);
 	}
 	
 	public void removeMenuItem(MenuItem menuItem) {
@@ -32,7 +36,7 @@ public class Menu {
 		}
 		return 0;
 	}
-	public String getId() {
+	public int getId() {
 		return this.id;
 	}
 	public String getStatus() {
@@ -45,7 +49,7 @@ public class Menu {
 		return this.menuItems;
 	}
 	// Setters
-	public void setId(String id) {
+	public void setId(int id) {
 		this.id = id;
 	}
 	public void setStatus(String status) {

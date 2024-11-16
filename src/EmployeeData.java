@@ -1,16 +1,21 @@
 public class EmployeeData extends UserData{
+	private int empID;
 	private String role;
 	private String username;
 	private String password;
 	
-	public EmployeeData(UserData userData, String role, String username, String password) {
-		super(userData.getId(), userData.getName(), userData.getEmail());
+	public EmployeeData(UserData userData, int empID, String role, String username, String password) {
+		super(userData.getUserID(), userData.getName(), userData.getEmail());
+		this.empID = empID;
 		this.role = role;
 		this.username = username;
 		this.password = password;
 	}
 	
 	// Getters
+	public int getEmpID() {
+		return this.empID;
+	}
 	public String getRole() {
 		return this.role;
 	}
@@ -30,4 +35,8 @@ public class EmployeeData extends UserData{
 	public void setPassword(String password) {
 		this.password = password;
 	}
+	// shouldn't be able to change the id
+//	public void setId(int empID) {
+//		this.empID = empID;
+//	}
 }

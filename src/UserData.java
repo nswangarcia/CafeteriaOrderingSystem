@@ -1,19 +1,19 @@
 public class UserData {
-	private String id;
+	private int userID;
 	private String name;
 	private String email;
 //	private String phone;
 	
-	public UserData(String id, String name, String email) {
-		this.id = id;
+	public UserData(int userID, String name, String email) {
+		this.userID = userID;
 		this.name = name;
 		this.email = email;
 //		this.phone = phone;
 	}
 	
 	// Getters
-	public String getId() {
-		return this.id;
+	public int getUserID() {
+		return this.userID;
 	}
 	public String getName() {
 		return this.name;
@@ -28,8 +28,8 @@ public class UserData {
 //		return this.phone;
 //	}
 	// Setters
-	public void setId(String id) {
-		this.id = id;
+	public void setUserID(int userID) {
+		this.userID = userID;
 	}
 	public void setName(String name) {
 		this.name = name;
