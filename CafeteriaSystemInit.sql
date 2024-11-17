@@ -150,25 +150,3 @@ VALUES
     ((SELECT orderID FROM OrderData WHERE name = 'John Doe'), (SELECT menuItemID FROM MenuItemData WHERE name = 'Omelets')),
     ((SELECT orderID FROM OrderData WHERE name = 'Jane Doe'), (SELECT menuItemID FROM MenuItemData WHERE name = 'Caesar Salad')),
     ((SELECT orderID FROM OrderData WHERE name = 'Jane Doe'), (SELECT menuItemID FROM MenuItemData WHERE name = 'BBQ Brisket'));
-
-
--- display orders
--- SELECT OrderData.orderID, OrderData.Name AS CustomerName, OrderData.Email, 
---        MenuData.Name AS MenuName, MenuItemData.Name AS MenuItemName
--- FROM OrderData
--- JOIN OrderMenuItemData ON OrderData.orderID = OrderMenuItemData.orderID
--- JOIN MenuItemData ON OrderMenuItemData.menuItemID = MenuItemData.menuItemID
--- JOIN MenuData ON MenuItemData.menuID = MenuData.menuID;
--- SELECT * FROM UserData JOIN EmployeeData ON UserData.userID = EmployeeData.userID;
-
--- SELECT * FROM OrderData AS o JOIN OrderMenuItemData AS omi ON omi.orderID = o.orderID JOIN MenuItemData AS mi ON mi.menuItemID = omi.menuItemID;
-
--- Select o.orderID, o.status, o.userID, omi.menuItemID, mi.name, mi.description, mi.menuID, md.name FROM OrderData AS o 
--- JOIN OrderMenuItemData As omi
--- JOIN MenuItemData As mi 
--- JOIN MenuData AS md
--- WHERE o.orderID = omi.orderID
--- AND omi.menuItemID = mi.menuItemID
--- AND md.menuID = mi.menuID;
-
--- SELECT * FROM MenuItemData;

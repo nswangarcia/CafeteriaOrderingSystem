@@ -25,11 +25,15 @@ public class OrderManagementSystem {
     }
 	
 	public void createOrder(UserData userData, Menu menu, List<MenuItem> menuItems) {
-		try (Connection connection = connectToDatabase()) {
-	        String insertQuery = "INSERT INTO OrderData (name, email, menuName, status, userID, timestamp) "
-	                           + "VALUES (?, ?, ?, ?, ?, ?)";
+	    try (Connection connection = connectToDatabase()) {
+	        connection.setAutoCommit(false);
+
+	        String insertOrderQuery = "INSERT INTO OrderData (name, email, menuName, status, userID, timestamp) "
+	                                + "VALUES (?, ?, ?, ?, ?, ?)";
 	        LocalDateTime timestamp = LocalDateTime.now();
-	        try (PreparedStatement stmt = connection.prepareStatement(insertQuery)) {
+	        int generatedOrderID = -1;
+
+	        try (PreparedStatement stmt = connection.prepareStatement(insertOrderQuery, Statement.RETURN_GENERATED_KEYS)) {
 	            stmt.setString(1, userData.getName());
 	            stmt.setString(2, userData.getEmail());
 	            stmt.setString(3, menu.getName());
@@ -37,57 +41,53 @@ public class OrderManagementSystem {
 	            stmt.setInt(5, userData.getUserID());
 	            stmt.setTimestamp(6, Timestamp.valueOf(timestamp));
 
-	            // Execute the insert query
 	            int rowsAffected = stmt.executeUpdate();
-
 	            if (rowsAffected > 0) {
-	                System.out.println("Order placed successfully.");
+	                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+	                    if (generatedKeys.next()) {
+	                        generatedOrderID = generatedKeys.getInt(1); // Get the generated orderID
+	                    }
+	                }
+	            }
+	            if (generatedOrderID > 0) {
+	                for (MenuItem menuItem : menuItems) {
+	                    addOrderMenuItemDataToDB(connection, generatedOrderID, menuItem);
+	                }
 
-	                loadOrders();
-	                for (Order order: orderData) {
-	    	        	if (order.getUserData().getUserID() == userData.getUserID()
-	    	        			&& order.getTimeStamp() == timestamp) {
-	    	        		for (MenuItem menuItem: menuItems) {
-	    	        			addOrderMenuItemDataToDB(order, menuItem);
-	    	        		}
-	    	        		break;
-	    	        	}
-	    	        }
+	                connection.commit();
+	                System.out.println("Order placed successfully with orderID: " + generatedOrderID);
 	            } else {
+	                connection.rollback();
 	                System.out.println("Failed to add order.");
 	            }
+	        } catch (SQLException e) {
+	            connection.rollback();
+	            throw e;
 	        }
+	        loadOrders();
 	    } catch (SQLException e) {
 	        e.printStackTrace();
 	    }
-	};
-	
-	public void addOrderMenuItemDataToDB(Order order, MenuItem menuItem) {
-		order.addMenuItem(menuItem);
-		int orderID = order.getOrderID();
-		int menuItemID = menuItem.getID();
-		  try (Connection connection = connectToDatabase()) {
-		        String insertQuery = "INSERT INTO OrderMenuItemData (orderID, menuItemID) VALUES (?, ?)";
+	}
 
-		        try (PreparedStatement stmt = connection.prepareStatement(insertQuery)) {
-		            stmt.setInt(1, orderID);
-		            stmt.setInt(2, menuItemID);
+	private void addOrderMenuItemDataToDB(Connection connection, int orderID, MenuItem menuItem) throws SQLException {
+	    String insertQuery = "INSERT INTO OrderMenuItemData (orderID, menuItemID) VALUES (?, ?)";
 
-		            int rowsAffected = stmt.executeUpdate();
+	    try (PreparedStatement stmt = connection.prepareStatement(insertQuery)) {
+	        stmt.setInt(1, orderID);
+	        stmt.setInt(2, menuItem.getID());
 
-		            if (rowsAffected > 0) {
-		                System.out.println("Menu item added to the order successfully.");
-		            } else {
-		                System.out.println("Failed to add menu item to the order.");
-		            }
-		        }
-		        loadOrders();
-		    } catch (SQLException e) {
-		        e.printStackTrace();
-		    }
+	        int rowsAffected = stmt.executeUpdate();
+	        if (rowsAffected > 0) {
+	            System.out.println("Menu item with ID " + menuItem.getID() + " added to order " + orderID);
+	        } else {
+	            System.out.println("Failed to add menu item with ID " + menuItem.getID() + " to order " + orderID);
+	        }
+	    }
 	}
 	
 	public List<Order> getOrders() {
+		loadOrders();
 		return this.orderData;
 	}
 	
@@ -114,7 +114,7 @@ public class OrderManagementSystem {
 		            stmt.setInt(2, orderID);
 		            
 		            int rowsAffected = stmt.executeUpdate();
-
+		            loadOrders();
 		            return rowsAffected;
 		        }
 		    } catch (SQLException e) {
@@ -125,9 +125,11 @@ public class OrderManagementSystem {
 	
 	public String ordersToString() {
 		String ordersStr = "";
+		loadOrders();
 		for (Order order : orderData) {
 			if (!order.getStatus().equals("delivered")) {
 				ordersStr += "\n*************************\nOrder ID: " + order.getOrderID()
+						+ "\nOrder Time: " + order.getTimestamp()
 						+ "\nOrder status: " + order.getStatus()
 						+ "\nCustomer name: " + order.getUserData().getName() + "\n"
 						+ "Customer email: " + order.getUserData().getEmail() + "\n"
@@ -146,7 +148,7 @@ public class OrderManagementSystem {
 	public void loadOrders() {
 	    orderData = new ArrayList<>();
 	    try (Connection connection = connectToDatabase()) {
-	        String orderQuery = "SELECT o.orderID, o.menuName, o.status, o.userID, o.timestamp, " +
+	        String orderQuery = "SELECT o.orderID, o.menuName, o.status, o.userID, o.timestamp, o.name, o.email, " +
 	                            "omi.menuItemID, mi.status AS itemStatus, mi.name AS itemName, " +
 	                            "mi.description, mi.menuID " +
 	                            "FROM OrderData AS o " +
@@ -165,6 +167,8 @@ public class OrderManagementSystem {
 	            String status = orderRs.getString("status");
 	            int userID = orderRs.getInt("userID");
 	            Timestamp time = orderRs.getTimestamp("timestamp");
+	            String name = orderRs.getString("name");
+	            String email = orderRs.getString("email");
 	            LocalDateTime timestamp = time != null ? time.toLocalDateTime() : null;
 	            int menuItemID = orderRs.getInt("menuItemID");
 	            String itemStatus = orderRs.getString("itemStatus");
@@ -172,7 +176,7 @@ public class OrderManagementSystem {
 	            String itemDescription = orderRs.getString("description");
 	            int menuID = orderRs.getInt("menuID");
 
-	            UserData userData = userMap.computeIfAbsent(userID, id -> new UserData(userID, null, null)); // Adjust if UserData has name/email fields
+	            UserData userData = userMap.computeIfAbsent(userID, id -> new UserData(userID, name, email));
 
 	            Order order = orderMap.computeIfAbsent(orderID, id -> new Order(timestamp, orderID, menuName, status, null, userData));
 

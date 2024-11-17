@@ -11,12 +11,10 @@ import java.util.List;
 
 public class MenuManagementSystem {
 
-	private List<Menu> menus;
 	private List<Menu> menuData;
 	private int count;
 	
 	public MenuManagementSystem() {
-		this.menus = new ArrayList<>();
 		this.menuData = new ArrayList<>();
 		count = 0;
 		//loadMenus(); // load from db
@@ -28,27 +26,33 @@ public class MenuManagementSystem {
     }
 	
 	// for main
-	public void addMenu(Menu menu) {
-		this.menuData.add(menu);
-		//this.count += menu.getNumberOfItems();
-		//saveMenusToDB(); 
+	public void addMenuByMenuName(String menuName) {
+		String status = "Available";
+		try (Connection connection = connectToDatabase()) {
+	        String insertQuery = "INSERT IGNORE INTO MenuData (name, status) VALUES (?, ?)";
+
+	        try (PreparedStatement stmt = connection.prepareStatement(insertQuery)) {
+	            stmt.setString(1, menuName);
+	            stmt.setString(2, status);
+
+	            int rowsAffected = stmt.executeUpdate();
+
+	            if (rowsAffected > 0) {
+	                System.out.println("Menu added successfully.");
+	                loadMenuData();
+	            } else {
+	                System.out.println("Failed to add menu.");
+	            }
+	        }
+	        loadMenuData();
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
 	}
-	
-	//TODO?? depends on database system 
-	// Don't need this
-//	public void resetMenuItemIds() {
-//		int id = 0;
-//		for (Menu menu : menus) {
-//			List<MenuItem> menuItems = menu.getMenuItems();
-//			for (MenuItem menuItem : menuItems) {
-//				id++;
-//				menuItem.setID(id);
-//			}
-//		}
-//	}
 	
 	// for main
 	public void addMenuItemByMenuName(String menuName, String menuItemName, String menuItemDescription) {
+		loadMenuData();
 		Menu menu = this.getMenuByName(menuName);
 		if (menu != null) {
 			String status = "Available";
@@ -64,33 +68,34 @@ public class MenuManagementSystem {
 		            int rowsAffected = stmt.executeUpdate();
 
 		            if (rowsAffected > 0) {
-		                System.out.println("Menu item added to the order successfully.");
+		                System.out.println("Menu item added successfully.");
 		                loadMenuData();
 		            } else {
-		                System.out.println("Failed to add menu item to the order.");
+		                System.out.println("Failed to add menu item.");
 		            }
 		        }
-		        loadMenus();
+		        loadMenuData();
 		    } catch (SQLException e) {
 		        e.printStackTrace();
 		    }
-		}
-		
-		
+		}		
 	}
 	
 	//for main
-	public void removeMenuItemByMenuName(String menuName, int menuItemID) {
-		Menu menu = this.getMenuByName(menuName);
+	public void removeMenuByMenuID(int menuID) {
+		loadMenuData();
+		Menu menu = this.getMenuByID(menuID);
 			if (menu != null) {
-				String deleteQuery = "DELETE FROM MenuItemData WHERE menuItemID = ?";
+				String deleteQuery = "DELETE FROM MenuData WHERE menuID = ?";
 			        
 		        try (Connection connection = connectToDatabase();
 		            PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery)) {
-		            preparedStatement.setInt(1, menuItemID);
+		            preparedStatement.setInt(1, menuID);
 		            
 		            int rowsDeleted = preparedStatement.executeUpdate();
-		            System.out.println("Rows deleted: " + rowsDeleted);
+		            if (rowsDeleted > 0) {
+		            	System.out.println("Successfully removed menu.");
+		            }
 		            loadMenuData();
 		        } catch (Exception e) {
 		            e.printStackTrace();
@@ -98,26 +103,50 @@ public class MenuManagementSystem {
 		}
 	}
 	
-//	public int getMenuItemCount() {
-//		return this.count;
-//	}
+	//for main
+	public void removeMenuItemByMenuItemID(int menuItemID) {
+		loadMenuData();
+		String deleteQuery = "DELETE FROM MenuItemData WHERE menuItemID = ?";
+	        
+        try (Connection connection = connectToDatabase();
+            PreparedStatement preparedStatement = connection.prepareStatement(deleteQuery)) {
+            preparedStatement.setInt(1, menuItemID);
+            
+            int rowsDeleted = preparedStatement.executeUpdate();
+            System.out.println("Rows deleted: " + rowsDeleted);
+            loadMenuData();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+	}
 	
 	public List<Menu> getMenus() {
+		loadMenuData();
 		return this.menuData;
 	}
 	
-	public Menu getMenuById(int id) {
-		for (Menu m: menuData) {
-			if (m.getId() == id) {
-				return m;
+//	public Menu getMenuById(int id) {
+//		for (Menu m: menuData) {
+//			if (m.getId() == id) {
+//				return m;
+//			}
+//		}
+//		return null;
+//	}
+	
+	public Menu getMenuByName(String name) {
+		loadMenuData();
+		for (Menu menu: menuData) {
+			if (menu.getName().toLowerCase().equals(name.toLowerCase())) {
+				return menu;
 			}
 		}
 		return null;
 	}
-	
-	public Menu getMenuByName(String name) {
+	public Menu getMenuByID(int menuID) {
+		loadMenuData();
 		for (Menu menu: menuData) {
-			if (menu.getName().toLowerCase().equals(name.toLowerCase())) {
+			if (menu.getId() == menuID) {
 				return menu;
 			}
 		}
@@ -126,26 +155,27 @@ public class MenuManagementSystem {
 	
 	public String getAvailableMenuNames() {
 		String result = "";
+		loadMenuData();
 		for (Menu menu : menuData) {
 			if (menu.getStatus().toLowerCase().equals("available")) {
-//				System.out.println(menu.getName());
 				result += menu.getName() + "\n";
 			}
 		}
 		return result;
 	}
 	
-	public List<String> getAvailableMenuNamesList() {
-		List<String> result = new ArrayList<>();
-		for (Menu menu : menuData) {
-			if (menu.getStatus().equals("available")) {
-				result.add(menu.getName());
-			}
-		}
-		return result;
-	}
+//	public List<String> getAvailableMenuNamesList() {
+//		List<String> result = new ArrayList<>();
+//		for (Menu menu : menuData) {
+//			if (menu.getStatus().equals("available")) {
+//				result.add(menu.getName());
+//			}
+//		}
+//		return result;
+//	}
 	
 	public boolean isValidMenu(String name) {
+		loadMenuData();
 		for (Menu menu : menuData) {
 			if (menu.getName().toLowerCase().equals(name.toLowerCase())) {
 				return true;
@@ -154,23 +184,36 @@ public class MenuManagementSystem {
 		return false;
 	}
 	
+	public String menusToString() {
+		String result = "";
+		loadMenuData();
+		for (Menu menu: menuData) {
+			result += "#" + menu.getId() + " " + menu.getName() + ": " + menu.getStatus() + "\n";
+		}
+		return result;
+	}
+	
 	public String menuItemsToString() {
 		String result = "";
+		loadMenuData();
 		for (Menu menu: menuData) {
 			result += "Menu: " + menu.getName() + "\n";
+			result += "MenuID: " + menu.getId() + "\n";
 			result += "Status: " + menu.getStatus() + "\n";
 			List<MenuItem> menuItems = menu.getMenuItems();
 			result += "Menu Items:\n";
 			for (MenuItem menuItem : menuItems) {
-				result += "#" + menuItem.getID() + " " + menuItem.getName() + "\n";
+				result += "#" + menuItem.getID() + " " + menuItem.getName() + ": " + menuItem.getStatus() + "\n";
 			}
 			result += "\n";
 		}
 		return result;
 	}
 	
-	public void updateMenuStatusByName(String menuName, String status) {
-		Menu menu = this.getMenuByName(menuName) ;
+	// TODO: update menu item status as well.
+	public void updateMenuStatusByMenuName(String menuName, String status) {
+		loadMenuData();
+		Menu menu = this.getMenuByName(menuName);
 		if (menu != null) {
 			String updateQuery = "UPDATE MenuData SET status = ? WHERE name = ?";
 			    
@@ -182,6 +225,7 @@ public class MenuManagementSystem {
 
 		        int rowsAffected = stmt.executeUpdate();
 		        if (rowsAffected > 0) {
+		        	updateMenuItemStatusByMenuName(menuName, status);
 		            System.out.println("Menu status updated successfully.");
 		            loadMenuData();
 		        } else {
@@ -193,11 +237,57 @@ public class MenuManagementSystem {
 			
 		}
 	}
+	public void updateMenuItemStatusByMenuName(String menuName, String status) {
+		loadMenuData();
+		Menu menu = this.getMenuByName(menuName);
+		if (menu != null) {
+			String updateQuery = "UPDATE MenuItemData SET status = ? WHERE menuID = ?";
+			    
+		    try (Connection connection = connectToDatabase();
+		         PreparedStatement stmt = connection.prepareStatement(updateQuery)) {
+
+		        stmt.setString(1, status);
+		        stmt.setInt(2, menu.getId());
+
+		        int rowsAffected = stmt.executeUpdate();
+		        if (rowsAffected > 0) {
+		            System.out.println("Menu item status updated successfully.");
+		            loadMenuData();
+		        } else {
+		            System.out.println("No menu item found with the given menu name.");
+		        }
+		    } catch (SQLException e) {
+		        e.printStackTrace();
+		    }
+			
+		}
+	}
+	public void updateMenuItemStatusByMenuItemID(int menuItemID, String status) {
+		String updateQuery = "UPDATE MenuItemData SET status = ? WHERE menuItemID = ?";
+		loadMenuData();
+	    try (Connection connection = connectToDatabase();
+	         PreparedStatement stmt = connection.prepareStatement(updateQuery)) {
+
+	        stmt.setString(1, status);
+	        stmt.setInt(2, menuItemID);
+
+	        int rowsAffected = stmt.executeUpdate();
+	        if (rowsAffected > 0) {
+	            System.out.println("Menu item status updated successfully.");
+	            loadMenuData();
+	        } else {
+	            System.out.println("No menu item found with the given name.");
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	}
 	
 	// for main.java
 	public void loadMenuData() {
 		// load menu data
 		  try (Connection connection = connectToDatabase()) {
+			    menuData = new ArrayList<>();
 	            String menuQuery = "SELECT * FROM MenuData;";
 	            Statement menuStmt = connection.createStatement();
 	            ResultSet menuRs = menuStmt.executeQuery(menuQuery);
@@ -208,7 +298,7 @@ public class MenuManagementSystem {
 	                
 	                Menu menu = new Menu(menuID, status, name);
                 	loadMenuItemData(menu);
-                	addMenu(menu);
+                	this.menuData.add(menu);
 	            }
 	        } catch (SQLException e) {
 	            e.printStackTrace();
@@ -238,49 +328,8 @@ public class MenuManagementSystem {
 	      }
 	}
 	
-	// TODO: database or file system
-	public void loadMenus() {
-		// load menu lists
-		  try (Connection connection = connectToDatabase()) {
-	            String menuQuery = "SELECT * FROM MenuData";
-	            Statement menuStmt = connection.createStatement();
-	            ResultSet menuRs = menuStmt.executeQuery(menuQuery);
-	            while (menuRs.next()) {
-	                int menuId = menuRs.getInt("menuID");
-	                String name = menuRs.getString("name");
-	                String status = menuRs.getString("status");
-	                Menu menu = new Menu(menuId, status, name);
-	                menu.setMenuItems(loadMenuItems(menuId, connection)); // Load menu items for each menu
-	                menuData.add(menu);
-	            }
-	        } catch (SQLException e) {
-	            e.printStackTrace();
-	        }
-	}
-	
-	private List<MenuItem> loadMenuItems(int mid, Connection connection) throws SQLException {
-	    List<MenuItem> menuItemData = new ArrayList<>();
-	    String menuItemQuery = "SELECT * FROM MenuItemData WHERE menuID = ?";
-	    
-	    try (PreparedStatement menuItemStmt = connection.prepareStatement(menuItemQuery)) {
-	        menuItemStmt.setInt(1, mid);
-	        ResultSet menuItemRs = menuItemStmt.executeQuery();
-	        
-	        while (menuItemRs.next()) {
-	            int menuItemID = menuItemRs.getInt("menuItemID");
-	            String name = menuItemRs.getString("name");
-	            String description = menuItemRs.getString("description");
-	            String status = menuItemRs.getString("status");
-	            int menuID = menuItemRs.getInt("menuID");
-
-	            MenuItem menuItem = new MenuItem(menuItemID, status, name, description, menuID);
-	            menuItemData.add(menuItem);
-	        }
-	    }
-	    return menuItemData;
-	}
-	
 	public void saveMenusToDB() {
+		loadMenuData();
 	    try (Connection connection = connectToDatabase()) {
 	        connection.setAutoCommit(false);
 
@@ -299,6 +348,7 @@ public class MenuManagementSystem {
 	private void saveMenu(Menu menu, Connection connection) throws SQLException {
 	    String query = "INSERT INTO MenuData (name, status) VALUES (?, ?) " +
 	                   "ON DUPLICATE KEY UPDATE name = VALUES(name), status = VALUES(status)";
+	    loadMenuData();
 	    try (PreparedStatement stmt = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
 	        stmt.setString(1, menu.getName());
 	        stmt.setString(2, menu.getStatus());
@@ -316,6 +366,7 @@ public class MenuManagementSystem {
 	private void saveMenuItems(Menu menu, Connection connection) throws SQLException {
 	    String query = "INSERT INTO MenuItemData (menuID, name, description, status) VALUES (?, ?, ?, ?) " +
 	                   "ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), status = VALUES(status)";
+	    loadMenuData();
 	    try (PreparedStatement stmt = connection.prepareStatement(query)) {
 	        for (MenuItem item : menu.getMenuItems()) {
 	            stmt.setInt(1, menu.getId());

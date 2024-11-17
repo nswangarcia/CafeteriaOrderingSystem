@@ -1,5 +1,6 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -13,15 +14,22 @@ public class Main {
 	private static List<User> users;
 	private static List<Employee> employees;
 	private static List<Customer> customers;
+	private static Authenticate authenticate;
+	private static MenuManagementSystem MMS;
+	private static OrderManagementSystem OMS;
 	
 	public static void main(String[] args) {
 		users = new ArrayList<>();
 		employees = new ArrayList<>();
 		customers = new ArrayList<>();
+		authenticate = new Authenticate();
 		
 		loadUsersFromDB();
 		initEmployees();
 		initCustomers();
+		
+		MMS = new MenuManagementSystem();
+		OMS = new OrderManagementSystem();
 		
 		run();
 		System.exit(0);
@@ -33,18 +41,8 @@ public class Main {
     }
 	// User
 	public static void run() {
-		//System.out.println("*************************\nSystem Initialization\n*************************");
-		MenuManagementSystem MMS = new MenuManagementSystem();
-		OrderManagementSystem OMS = new OrderManagementSystem();
-//		Manager defaultManager = initManager();
-//		Operator defaultOperator = initOperator();
-//		Customer defaultCustomer = initCustomer();
-		//initOrder(OMS, MMS, defaultCustomer);
-		Authenticate authenticate = new Authenticate();
 		String name;
 		String email;
-		
-		//new DatabaseConnection();
 		
 		Scanner in = new Scanner(System.in);
 		
@@ -56,8 +54,7 @@ public class Main {
 		    	System.out.println("Selected option 1: Customer\n");
 		    	name = getInput("Please enter your name:", in);
 		    	email = getInput("Please enter your email:", in);
-		    	UserData userData = new UserData(customers.size() + 1, name, email);
-		    	Customer customer = new Customer(userData);
+		    	Customer customer = initCustomer(name, email);
 		    	customerGUI(customer, MMS, OMS);
 		    } else if (option.equals("2")) {
 		    	System.out.println("Selected option 2: Employee\n");
@@ -73,6 +70,7 @@ public class Main {
 		System.out.println("Goodbye!");
 		System.exit(0);
 	}
+
 	// Customer
 	public static void customerGUI(Customer customer, MenuManagementSystem MMS, OrderManagementSystem OMS) {
 		Scanner in = new Scanner(System.in);
@@ -200,8 +198,8 @@ public class Main {
 		System.out.println(employeeDataToString());
 		username = getInput("Enter username:", in);
 		password = getInput("Enter password:", in);
-		// TODO: actually authenticate
-		Employee eAuth = authenticate.login(username, password, employees);
+		// authenticate
+		Employee eAuth = authenticate.login(username, password);
 		if (eAuth != null) {
 			Employee employee = getEmployee(username, password);
 			if (employee != null) {
@@ -236,7 +234,7 @@ public class Main {
 				OMS.updateOrderStatusById(Integer.parseInt(orderId), status);
 			} else if (option.equals("3")) {
 				System.out.println("Selected " + option + ": Log Out");
-				System.out.println("Logging out... Goodbye!\n");
+				authenticate.logout();
 				break;
 			} else {
 				System.out.println("Invalid option");
@@ -247,32 +245,49 @@ public class Main {
 	public static void managerGUI(Employee employee, MenuManagementSystem MMS) {
 		Scanner in = new Scanner(System.in);
 		while (true) {
-			System.out.println("Select an option:\n1: View Menu Items\n2: Add Menu Item\n3: Remove Menu Item\n4: Update Menu Status\n5: Log Out");
+			System.out.println("Select an option:\n1: View Menus\n2: View Menu Items\n3: Add Menu\n4: Add Menu Item\n5: Remove Menu\n6: Remove Menu Item\n7: Update Menu Status\n8: Update Menu Item Status\n9: Log Out");
 			String option = in.nextLine();
 			if (option.equals("1")) {
+				System.out.println("Selected " + option + ": View Menus");
+				System.out.println(MMS.menusToString());
+			} else if (option.equals("2")) {
 				System.out.println("Selected " + option + ": View Menu Items");
 				System.out.println(MMS.menuItemsToString());
-			} else if (option.equals("2")) {
+			} else if (option.equals("3")) {
+				System.out.println("Selected " + option + ": Add Menu");
+				String menuName = getInput("Please enter the name of the menu you want to add:", in);
+				MMS.addMenuByMenuName(menuName);
+			} else if (option.equals("4")) {
 				System.out.println("Selected " + option + ": Add Menu Item");
-				String menuName = getInput("Please enter to name of the menu you want to add a menu item to:", in);
+				String menuName = getInput("Please enter the name of the menu you want to add a menu item to:", in);
 				String menuItemName = getInput("Please enter the name of the menu item:", in);
 				String menuItemDescription = getInput("Please enter the menu item description:", in);
 				MMS.addMenuItemByMenuName(menuName, menuItemName, menuItemDescription);
-			} else if (option.equals("3")) {
+			} else if (option.equals("5")) {
+				System.out.println("Selected " + option + ": Remove Menu");
+				String menuID = getInput("Please enter the menuID of the menu to remove:", in);
+				MMS.removeMenuByMenuID(Integer.parseInt(menuID));
+			} else if (option.equals("6")) {
 				System.out.println("Selected " + option + ": Remove Menu Item");
-				String menuName = getInput("Please enter the name of the menu you want to remove a menu item from:", in);
-				String menuItemId = getInput("Please enter the id of the menu item to remove:", in);
-				MMS.removeMenuItemByMenuName(menuName, Integer.parseInt(menuItemId));
-			} else if (option.equals("4")) {
+				String menuItemID = getInput("Please enter the menuItemID of the menu item to remove:", in);
+				MMS.removeMenuItemByMenuItemID(Integer.parseInt(menuItemID));
+			} else if (option.equals("7")) {
 				System.out.println("Selected " + option + ": Update Menu Status");
 				String menuName = getInput("Please provide name of menu you want to update the status for:", in);
 				String status = getInput("Please provide status you want to update the menu to:", in);
-				MMS.updateMenuStatusByName(menuName, status);
-			} else if (option.equals("5")) {
+				MMS.updateMenuStatusByMenuName(menuName, status);
+			} else if (option.equals("8")) {
+				System.out.println("Selected " + option + ": Update Menu Item Status");
+				// TODO error handling
+				String menuItemID = getInput("Please provide menuItemID of menu item to update the status for:", in);
+				String status = getInput("Please provide status you want to update the menu item to:", in);
+				MMS.updateMenuItemStatusByMenuItemID(Integer.parseInt(menuItemID), status);
+			} else if (option.equals("9")) {
 				System.out.println("Selected " + option + ": Log Out\n");
 				System.out.println("Logging out... Goodbye!\n");
 				break;
-			} else {
+			}
+			else {
 				System.out.println("Invalid option");
 			}
 		}
@@ -284,6 +299,17 @@ public class Main {
 			System.out.println(message);
 			input = in.nextLine();
 			if (!input.isEmpty()) {
+				return input;
+			}
+		}
+	}
+	// Helper for scanner input
+	public static int getIntInput(String message, Scanner in) {
+		int input = -1;
+		while(true) {
+			System.out.println(message);
+			input = in.nextInt();
+			if (input != -1) {
 				return input;
 			}
 		}
@@ -355,28 +381,7 @@ public class Main {
 	    }
 	}
 	
-	// Default Manager
-//	public static Manager initManager() {
-//		// Manager
-//		UserData managerData = new UserData(employees.size() + 1, "Pat Jones", "pjones@email.com");
-//		EmployeeData managerEmployeeData = new EmployeeData(managerData, "manager", "manager", "123");
-//		//System.out.println("Default Manager initialized");
-//		Manager manager = new Manager(managerData, managerEmployeeData);
-//		addEmployee(manager);
-//		return manager;
-//	}
-//	
-//	// Default Operator
-//	public static Operator initOperator() {
-//		// Operator
-//		UserData operatorData = new UserData(employees.size() + 1, "Tris Dawson", "tdaw@email.com");
-//		EmployeeData operatorEmployeeData = new EmployeeData(operatorData, "operator", "operator", "321");
-//		//System.out.println("Default Operator initialized");
-//		Operator operator = new Operator(operatorData, operatorEmployeeData);
-//		addEmployee(operator);
-//		return operator;
-//	}
-	// Default Customer
+	// Customer
 	public static Customer initCustomer(String name, String email) {
 		// Customer
 		for (User u: users) {
@@ -390,43 +395,35 @@ public class Main {
 		return new Customer(userData);
 	}
 	
-	public static UserData createNewUserAndSaveToDB(String n, String em) {
-		boolean exists = false;
-		try (Connection connection = connectToDatabase()) {
-            String userQuery = "INSERT IGNORE INTO UserData (name, email) VALUES ('" + n + "', '" + em + "');";
-            Statement userStmt = connection.createStatement();
-            ResultSet userRs = userStmt.executeQuery(userQuery);
-            userQuery = "SELECT * FROM UserData WHERE name = '" + n + "', AND email = '" + em + "';";
-            userStmt = connection.createStatement();
-            userRs = userStmt.executeQuery(userQuery);
-            while (userRs.next()) {
-                int userID = userRs.getInt("userID");
-                String name = userRs.getString("name");
-                String email = userRs.getString("email");
-                UserData userData = new UserData(userID, name, email);
-                User user = new User(userData);
-                return userData;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-		return null;
+	public static UserData createNewUserAndSaveToDB(String name, String email) {
+	    try (Connection connection = connectToDatabase()) {
+	        String insertQuery = "INSERT IGNORE INTO UserData (name, email) VALUES (?, ?)";
+	        try (PreparedStatement insertStmt = connection.prepareStatement(insertQuery)) {
+	            insertStmt.setString(1, name);
+	            insertStmt.setString(2, email);
+	            insertStmt.executeUpdate();
+	        }
+
+	        String selectQuery = "SELECT * FROM UserData WHERE name = ? AND email = ?";
+	        try (PreparedStatement selectStmt = connection.prepareStatement(selectQuery)) {
+	            selectStmt.setString(1, name);
+	            selectStmt.setString(2, email);
+	            try (ResultSet rs = selectStmt.executeQuery()) {
+	                if (rs.next()) {
+	                    int userID = rs.getInt("userID");
+	                    String retrievedName = rs.getString("name");
+	                    String retrievedEmail = rs.getString("email");
+	                    return new UserData(userID, retrievedName, retrievedEmail);
+	                }
+	            }
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	    return null;
 	}
-	// Default Order
-//	public static void initOrder(OrderManagementSystem OMS, MenuManagementSystem MMS, Customer customer) {
-//		UserData userData = customer.getUserData();
-//		Menu menu = MMS.getMenuByName("breakfast");
-//		List<MenuItem> menuItems = menu.getMenuItems();
-//		Order order = new Order(OMS.getOrders().size() + 1, menu, menuItems, userData);
-//		OMS.addOrder(order);
-//		//System.out.println("Default Order initialized");
-//	}
-	// Initialize Order Management System
-//	public static OrderManagementSystem initOMS() {
-//		OrderManagementSystem OMS = new OrderManagementSystem();
-//		//System.out.println("Default OMS initialized");
-//		return OMS;
-//	}
+
+	
 	// Employee
 	public static void addEmployee(Employee employee) {
 		employees.add(employee);
